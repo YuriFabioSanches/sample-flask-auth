@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify
 from database import db
 from models.user import User
-from flask_login import LoginManager, login_user, current_user, logout_user, login_required
+from flask_login import LoginManager, login_required, login_user, logout_user,current_user
 
 app = Flask(__name__)
 login_manager = LoginManager()
@@ -13,9 +13,14 @@ db.init_app(app)
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
+def get_session():
+  with app.app_context():
+    return db.session
+
 @login_manager.user_loader
 def load_user(user_id):
-  return User.query.get(user_id)
+  session = get_session()
+  return session.get(User, user_id)
 
 @app.route('/login', methods=["POST"])
 def login():
@@ -24,7 +29,8 @@ def login():
   password = data.get("password")
   
   if username and password:
-    user = User.query.filter_by(username=username).first()
+    session = get_session()
+    user = session.query(User).filter_by(username=username).first()
     if user and user.password == password:
       login_user(user)
       print(current_user.is_authenticated)
